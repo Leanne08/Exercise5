@@ -32,7 +32,7 @@ class AboutWindow(QWidget):
         email_label.setGeometry(62, 240, 260, 30)
         email_label.setStyleSheet("font-size: 14px; color: #34495e;")
 
-        github_label = QLabel('<a href="https://github.com/Leanne08/Exersice4-icecream">My GitHub Repository</a>', self)
+        github_label = QLabel('<a href="https://github.com/Leanne08/Exercise5">My GitHub Repository</a>', self)
         github_label.setGeometry(107, 280, 180, 30)
         github_label.setStyleSheet("font-size: 14px;")
         github_label.setOpenExternalLinks(True)
