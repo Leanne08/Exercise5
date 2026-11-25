@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QApplication, QWidget, QLabel, QSlider, QDoubleSpinBox, QPushButton
 from PySide6.QtCore import Qt, QTimer
 from Body import Body
+from GraphWindow import GraphWindow
 from AboutWindow import AboutWindow
 
 
@@ -13,6 +14,7 @@ class HeatTransfer(QWidget):
         with open("style.qss") as f:
             self.setStyleSheet(f.read())
 
+        self.graph_window = GraphWindow(self)
         self.about_window = AboutWindow()
 
         self.body1 = None
