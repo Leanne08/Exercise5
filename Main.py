@@ -27,15 +27,18 @@ class HeatTransfer(QWidget):
         self.body2_temp_history = []
 
         self.timer = QTimer(self)
+        self.timer.timeout.connect(self.timer_method)
 
         self.setupUI()
-
+        self.update_body_visuals(1, self.left_slider.value())
+        self.update_body_visuals(2, self.right_slider.value())
 
     def setupUI(self):
         self.left_slider = QSlider(Qt.Orientation.Vertical, self)
         self.left_slider.setGeometry(45, 40, 25, 170)
         self.left_slider.setRange(0, 200)
         self.left_slider.setValue(200)
+        self.left_slider.valueChanged.connect(self.left_temperature_changed)
 
         self.left_body_box = QLabel(self)
         self.left_body_box.setGeometry(85, 40, 125, 170)
@@ -80,6 +83,7 @@ class HeatTransfer(QWidget):
         self.start_btn = QPushButton("Start", self)
         self.start_btn.setCheckable(True)
         self.start_btn.setGeometry(305, 230, 130, 42)
+        self.start_btn.clicked.connect(self.start_stop_button_method)
 
         self.graphs_btn = QPushButton("Graphs", self)
         self.graphs_btn.setGeometry(305, 285, 130, 42)
@@ -96,6 +100,7 @@ class HeatTransfer(QWidget):
         self.right_slider.setGeometry(670, 40, 25, 170)
         self.right_slider.setRange(0, 200)
         self.right_slider.setValue(0)
+        self.right_slider.valueChanged.connect(self.right_temperature_changed)
 
         self.right_temp_spin = QDoubleSpinBox(self)
         self.right_temp_spin.setGeometry(530, 235, 115, 30)
@@ -122,6 +127,85 @@ class HeatTransfer(QWidget):
         self.right_hcap_lbl = QLabel("H. Cap.", self)
         self.right_hcap_lbl.setGeometry(655, 325, 55, 30)
 
+    def update_body_visuals(self, body_num, temp):
+        clamped_temp = max(0.0, min(200.0, temp))
+        red_intensity = int((clamped_temp / 200.0) * 255)
+        color_style = f"background-color: rgb({red_intensity}, 0, 0); border-radius: 6px;"
+
+        if body_num == 1:
+            self.left_temp_spin.setValue(round(temp, 1))
+            self.left_body_box.setStyleSheet(color_style)
+        else:
+            self.right_temp_spin.setValue(round(temp, 1))
+            self.right_body_box.setStyleSheet(color_style)
+
+    def left_temperature_changed(self):
+        if self.updating_from_timer:
+            return
+        temp = float(self.left_slider.value())
+        self.update_body_visuals(1, temp)
+
+    def right_temperature_changed(self):
+        if self.updating_from_timer:
+            return
+        temp = float(self.right_slider.value())
+        self.update_body_visuals(2, temp)
+
+    def set_inputs_enabled(self, enabled):
+        self.left_slider.setEnabled(enabled)
+        self.right_slider.setEnabled(enabled)
+        self.left_mass_spin.setEnabled(enabled)
+        self.left_hcap_spin.setEnabled(enabled)
+        self.right_mass_spin.setEnabled(enabled)
+        self.right_hcap_spin.setEnabled(enabled)
+        self.conductivity_spin.setEnabled(enabled)
+
+    def start_stop_button_method(self):
+        if self.start_btn.isChecked():
+            self.start_btn.setText("Stop")
+            self.set_inputs_enabled(False)
+
+            self.body1 = Body(self.left_mass_spin.value(), self.left_hcap_spin.value(),self.left_temp_spin.value())
+            self.body2 = Body(self.right_mass_spin.value(),self.right_hcap_spin.value(),self.right_temp_spin.value())
+
+            self.elapsed_time = 0.0
+            self.time_history = [0.0]
+            self.body1_temp_history = [self.body1.temperature]
+            self.body2_temp_history = [self.body2.temperature]
+
+            self.timer.start(self.dt_ms)
+        else:
+            self.timer.stop()
+            self.start_btn.setText("Start")
+            self.set_inputs_enabled(True)
+
+    def timer_method(self):
+        sigma = self.conductivity_spin.value()
+        t1 = self.body1.temperature
+        t2 = self.body2.temperature
+
+        i1 = sigma * (t2 - t1)
+        i2 = sigma * (t1 - t2)
+
+        dq1 = i1 * self.dt
+        dq2 = i2 * self.dt
+
+        new_t1 = self.body1.add_heat(dq1)
+        new_t2 = self.body2.add_heat(dq2)
+
+        self.elapsed_time += self.dt
+
+        self.time_history.append(self.elapsed_time)
+        self.body1_temp_history.append(new_t1)
+        self.body2_temp_history.append(new_t2)
+
+        self.updating_from_timer = True
+        self.left_slider.setValue(int(round(new_t1)))
+        self.right_slider.setValue(int(round(new_t2)))
+        self.updating_from_timer = False
+
+        self.update_body_visuals(1, new_t1)
+        self.update_body_visuals(2, new_t2)
 
     def open_graph_window(self):
         self.graph_window.show()
